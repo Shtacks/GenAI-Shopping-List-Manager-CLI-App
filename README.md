@@ -1,14 +1,16 @@
 # Shopping List Organizer
 
-A command-line tool for managing and organizing shopping lists with AI-powered categorization.
+A command-line tool for managing and organizing shopping lists and recipes with AI-powered features.
 
 ## Features
 
-- Create and manage multiple shopping lists
+- Create and manage multiple shopping lists and recipes
 - Add items with quantities and notes
-- AI-powered categorization of items using GPT-4-mini
-- Export lists to markdown format
+- AI-powered categorization of items using GPT-3.5-turbo
+- AI-powered recipe generation and ingredient list creation
+- Export lists and recipes to markdown format
 - Interactive CLI interface with rich formatting
+- Organized file storage with separate JSON and markdown directories
 
 ## Installation
 
@@ -60,13 +62,38 @@ shopping-list
    - Displays item count and last update time
 
 5. **Organize list**
-   - Uses GPT-4-mini to categorize items intelligently
+   - Uses GPT-3.5-turbo to categorize items intelligently
    - Automatically groups items into logical categories
 
 6. **Export to .md**
    - Exports a shopping list to markdown format
    - Groups items by category
    - Includes timestamps and purchase status
+
+7. **Remove items from list**
+   - Remove specific items from a list
+   - Select items by number for easy removal
+
+8. **Create list from meal**
+   - Generate a shopping list from a meal name
+   - AI creates detailed ingredient list with quantities
+   - Automatically categorizes ingredients
+
+9. **Generate Recipe**
+   - Create a complete recipe using AI
+   - Includes description, prep/cook times, ingredients, and instructions
+   - Option to create a shopping list from the recipe
+
+10. **Show Recipe**
+    - View saved recipes with full details
+    - Organized display of ingredients by category
+    - Step-by-step instructions
+    - Option to create shopping list from recipe
+
+11. **Export recipe to .md**
+    - Export recipes to markdown format
+    - Beautiful, organized layout
+    - Includes all recipe details and metadata
 
 ## Development
 
@@ -84,10 +111,25 @@ shopping-list-organizer/
 │   ├── main.py           # Main CLI entry point
 │   ├── models.py         # Data models
 │   └── utils.py          # Utility functions
+├── lists/                # Data storage directory
+│   ├── shopping/         # Shopping list storage
+│   │   ├── JSON/        # Shopping list data files
+│   │   └── MD/          # Shopping list markdown exports
+│   └── recipes/         # Recipe storage
+│       ├── JSON/        # Recipe data files
+│       └── MD/          # Recipe markdown exports
 └── tests/
     ├── __init__.py
     └── test_main.py      # Main test file
 ```
+
+### Data Organization
+
+- Shopping lists and recipes are stored in separate directories
+- JSON files contain the raw data
+- Markdown files provide formatted, readable exports
+- All user data is stored in the `lists` directory
+- Automatic directory creation and organization
 
 ### Running Tests
 
