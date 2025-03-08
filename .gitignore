@@ -33,7 +33,6 @@ ENV/
 *.swo
 
 # Project specific
-*.json
 !package.json
 !package-lock.json
 *.log
@@ -45,7 +44,6 @@ ENV/
 .env.*.local
 
 # Shopping list data
-*.json
 !package.json
 !package-lock.json
 

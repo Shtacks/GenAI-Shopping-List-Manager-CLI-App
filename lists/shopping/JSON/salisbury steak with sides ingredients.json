@@ -1,0 +1,268 @@
+{
+  "name": "salisbury steak with sides ingredients",
+  "items": [
+    {
+      "name": "ground beef",
+      "quantity": 1,
+      "category": "Uncategorized",
+      "purchased": false,
+      "notes": "1 pound - 80% lean for better flavor",
+      "created_at": "2025-03-07T18:10:36.939781",
+      "updated_at": "2025-03-07T18:10:36.939781"
+    },
+    {
+      "name": "breadcrumbs",
+      "quantity": 1,
+      "category": "Uncategorized",
+      "purchased": false,
+      "notes": "1/2 cup - plain, for binding",
+      "created_at": "2025-03-07T18:10:36.939781",
+      "updated_at": "2025-03-07T18:10:36.939781"
+    },
+    {
+      "name": "egg",
+      "quantity": 1,
+      "category": "Uncategorized",
+      "purchased": false,
+      "notes": "1 large - beaten",
+      "created_at": "2025-03-07T18:10:36.939781",
+      "updated_at": "2025-03-07T18:10:36.939781"
+    },
+    {
+      "name": "Worcestershire sauce",
+      "quantity": 1,
+      "category": "Uncategorized",
+      "purchased": false,
+      "notes": "1 tablespoon - for flavor",
+      "created_at": "2025-03-07T18:10:36.939781",
+      "updated_at": "2025-03-07T18:10:36.939781"
+    },
+    {
+      "name": "garlic powder",
+      "quantity": 1,
+      "category": "Uncategorized",
+      "purchased": false,
+      "notes": "1 teaspoon - for seasoning",
+      "created_at": "2025-03-07T18:10:36.939781",
+      "updated_at": "2025-03-07T18:10:36.939781"
+    },
+    {
+      "name": "onion powder",
+      "quantity": 1,
+      "category": "Uncategorized",
+      "purchased": false,
+      "notes": "1 teaspoon - for seasoning",
+      "created_at": "2025-03-07T18:10:36.939781",
+      "updated_at": "2025-03-07T18:10:36.939781"
+    },
+    {
+      "name": "salt",
+      "quantity": 1,
+      "category": "Uncategorized",
+      "purchased": false,
+      "notes": "1 teaspoon - to taste",
+      "created_at": "2025-03-07T18:10:36.939781",
+      "updated_at": "2025-03-07T18:10:36.939781"
+    },
+    {
+      "name": "black pepper",
+      "quantity": 1,
+      "category": "Uncategorized",
+      "purchased": false,
+      "notes": "1/2 teaspoon - freshly ground, to taste",
+      "created_at": "2025-03-07T18:10:36.939781",
+      "updated_at": "2025-03-07T18:10:36.939781"
+    },
+    {
+      "name": "olive oil",
+      "quantity": 2,
+      "category": "Uncategorized",
+      "purchased": false,
+      "notes": "2 tablespoons - for cooking",
+      "created_at": "2025-03-07T18:10:36.939781",
+      "updated_at": "2025-03-07T18:10:36.939781"
+    },
+    {
+      "name": "onion",
+      "quantity": 1,
+      "category": "Uncategorized",
+      "purchased": false,
+      "notes": "1 medium - sliced thinly",
+      "created_at": "2025-03-07T18:10:36.939781",
+      "updated_at": "2025-03-07T18:10:36.939781"
+    },
+    {
+      "name": "mushrooms",
+      "quantity": 8,
+      "category": "Uncategorized",
+      "purchased": false,
+      "notes": "8 ounces - sliced, preferably cremini or button",
+      "created_at": "2025-03-07T18:10:36.939781",
+      "updated_at": "2025-03-07T18:10:36.939781"
+    },
+    {
+      "name": "beef broth",
+      "quantity": 1,
+      "category": "Uncategorized",
+      "purchased": false,
+      "notes": "1 cup - low sodium, for sauce",
+      "created_at": "2025-03-07T18:10:36.939781",
+      "updated_at": "2025-03-07T18:10:36.939781"
+    },
+    {
+      "name": "ketchup",
+      "quantity": 2,
+      "category": "Uncategorized",
+      "purchased": false,
+      "notes": "2 tablespoons - for sauce",
+      "created_at": "2025-03-07T18:10:36.939781",
+      "updated_at": "2025-03-07T18:10:36.939781"
+    },
+    {
+      "name": "mustard",
+      "quantity": 1,
+      "category": "Uncategorized",
+      "purchased": false,
+      "notes": "1 tablespoon - yellow or Dijon, for sauce",
+      "created_at": "2025-03-07T18:10:36.939781",
+      "updated_at": "2025-03-07T18:10:36.939781"
+    },
+    {
+      "name": "cornstarch",
+      "quantity": 1,
+      "category": "Uncategorized",
+      "purchased": false,
+      "notes": "1 tablespoon - for thickening (optional)",
+      "created_at": "2025-03-07T18:10:36.939781",
+      "updated_at": "2025-03-07T18:10:36.939781"
+    },
+    {
+      "name": "water",
+      "quantity": 2,
+      "category": "Uncategorized",
+      "purchased": false,
+      "notes": "2 tablespoons - to mix with cornstarch (if using)",
+      "created_at": "2025-03-07T18:10:36.939781",
+      "updated_at": "2025-03-07T18:10:36.939781"
+    },
+    {
+      "name": "potatoes",
+      "quantity": 2,
+      "category": "Uncategorized",
+      "purchased": false,
+      "notes": "2 pounds - peeled and cubed (Yukon Gold or Russet)",
+      "created_at": "2025-03-07T18:10:36.939781",
+      "updated_at": "2025-03-07T18:10:36.939781"
+    },
+    {
+      "name": "butter",
+      "quantity": 4,
+      "category": "Uncategorized",
+      "purchased": false,
+      "notes": "4 tablespoons - unsalted, room temperature",
+      "created_at": "2025-03-07T18:10:36.939781",
+      "updated_at": "2025-03-07T18:10:36.939781"
+    },
+    {
+      "name": "milk",
+      "quantity": 1,
+      "category": "Uncategorized",
+      "purchased": false,
+      "notes": "1/2 cup - whole milk, warmed",
+      "created_at": "2025-03-07T18:10:36.939781",
+      "updated_at": "2025-03-07T18:10:36.939781"
+    },
+    {
+      "name": "garlic",
+      "quantity": 2,
+      "category": "Uncategorized",
+      "purchased": false,
+      "notes": "2 cloves - minced, optional for flavor",
+      "created_at": "2025-03-07T18:10:36.939781",
+      "updated_at": "2025-03-07T18:10:36.939781"
+    },
+    {
+      "name": "salt",
+      "quantity": 1,
+      "category": "Uncategorized",
+      "purchased": false,
+      "notes": "1 teaspoon - to taste",
+      "created_at": "2025-03-07T18:10:36.939781",
+      "updated_at": "2025-03-07T18:10:36.939781"
+    },
+    {
+      "name": "black pepper",
+      "quantity": 1,
+      "category": "Uncategorized",
+      "purchased": false,
+      "notes": "1/2 teaspoon - freshly ground, to taste",
+      "created_at": "2025-03-07T18:10:36.939781",
+      "updated_at": "2025-03-07T18:10:36.939781"
+    },
+    {
+      "name": "green beans",
+      "quantity": 1,
+      "category": "Uncategorized",
+      "purchased": false,
+      "notes": "1 pound - trimmed, fresh or frozen",
+      "created_at": "2025-03-07T18:10:36.939781",
+      "updated_at": "2025-03-07T18:10:36.939781"
+    },
+    {
+      "name": "butter",
+      "quantity": 1,
+      "category": "Uncategorized",
+      "purchased": false,
+      "notes": "1 tablespoon - unsalted",
+      "created_at": "2025-03-07T18:10:36.939781",
+      "updated_at": "2025-03-07T18:10:36.939781"
+    },
+    {
+      "name": "garlic",
+      "quantity": 1,
+      "category": "Uncategorized",
+      "purchased": false,
+      "notes": "1 clove - minced",
+      "created_at": "2025-03-07T18:10:36.939781",
+      "updated_at": "2025-03-07T18:10:36.939781"
+    },
+    {
+      "name": "salt",
+      "quantity": 1,
+      "category": "Uncategorized",
+      "purchased": false,
+      "notes": "1/2 teaspoon - to taste",
+      "created_at": "2025-03-07T18:10:36.939781",
+      "updated_at": "2025-03-07T18:10:36.939781"
+    },
+    {
+      "name": "black pepper",
+      "quantity": 1,
+      "category": "Uncategorized",
+      "purchased": false,
+      "notes": "1/4 teaspoon - freshly ground, to taste",
+      "created_at": "2025-03-07T18:10:36.939781",
+      "updated_at": "2025-03-07T18:10:36.939781"
+    },
+    {
+      "name": "lemon juice",
+      "quantity": 1,
+      "category": "Uncategorized",
+      "purchased": false,
+      "notes": "1 teaspoon - for freshness, optional",
+      "created_at": "2025-03-07T18:10:36.939781",
+      "updated_at": "2025-03-07T18:10:36.939781"
+    },
+    {
+      "name": "parsley",
+      "quantity": 2,
+      "category": "Uncategorized",
+      "purchased": false,
+      "notes": "2 tablespoons - chopped, for garnish on salisbury steak",
+      "created_at": "2025-03-07T18:10:36.939781",
+      "updated_at": "2025-03-07T18:10:36.939781"
+    }
+  ],
+  "created_at": "2025-03-07T18:10:36.939781",
+  "updated_at": "2025-03-07T18:10:36.939781"
+}
