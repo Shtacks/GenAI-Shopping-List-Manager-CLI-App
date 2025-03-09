@@ -24,9 +24,9 @@ from src.database import (
 
 console = Console()
 
-def display_menu() -> None:
-    """Display the main menu options."""
-    console.print("\n[bold cyan]Shopping List Organizer[/bold cyan]")
+def display_shopping_menu() -> None:
+    """Display the shopping list management menu options."""
+    console.print("\n[bold cyan]Shopping List Manager[/bold cyan]")
     console.print("1. Create new list")
     console.print("2. Add item to list")
     console.print("3. Show list")
@@ -35,10 +35,24 @@ def display_menu() -> None:
     console.print("6. Export list to .md")
     console.print("7. Remove items from list")
     console.print("8. Create list from meal")
-    console.print("9. Generate Recipe")
-    console.print("10. Show Recipe")
-    console.print("11. Export recipe to .md")
-    console.print("12. Quit")
+    console.print("9. Back to main menu")
+    console.print()
+
+def display_recipe_menu() -> None:
+    """Display the recipe management menu options."""
+    console.print("\n[bold cyan]Recipe Manager[/bold cyan]")
+    console.print("1. Generate new recipe")
+    console.print("2. Show recipe")
+    console.print("3. Export recipe to .md")
+    console.print("4. Back to main menu")
+    console.print()
+
+def display_main_menu() -> None:
+    """Display the main menu options."""
+    console.print("\n[bold cyan]Kitchen Helper[/bold cyan]")
+    console.print("1. Shopping List Manager")
+    console.print("2. Recipe Manager")
+    console.print("3. Quit")
     console.print()
 
 def create_list() -> None:
@@ -589,14 +603,11 @@ def export_recipe_to_markdown_file() -> None:
     except Exception as e:
         console.print(f"[red]Error exporting recipe: {str(e)}[/red]")
 
-def main() -> None:
-    """Main application loop."""
-    # Ensure directories exist and handle migration at startup
-    ensure_directories_exist()
-    
+def shopping_menu_loop() -> None:
+    """Shopping list management menu loop."""
     while True:
-        display_menu()
-        choice = Prompt.ask("Enter your choice", choices=["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"])
+        display_shopping_menu()
+        choice = Prompt.ask("Enter your choice", choices=["1", "2", "3", "4", "5", "6", "7", "8", "9"])
         
         if choice == "1":
             create_list()
@@ -615,12 +626,37 @@ def main() -> None:
         elif choice == "8":
             create_list_from_meal()
         elif choice == "9":
+            break
+
+def recipe_menu_loop() -> None:
+    """Recipe management menu loop."""
+    while True:
+        display_recipe_menu()
+        choice = Prompt.ask("Enter your choice", choices=["1", "2", "3", "4"])
+        
+        if choice == "1":
             generate_new_recipe()
-        elif choice == "10":
+        elif choice == "2":
             show_recipe()
-        elif choice == "11":
+        elif choice == "3":
             export_recipe_to_markdown_file()
-        elif choice == "12":
+        elif choice == "4":
+            break
+
+def main() -> None:
+    """Main application loop."""
+    # Ensure directories exist and handle migration at startup
+    ensure_directories_exist()
+    
+    while True:
+        display_main_menu()
+        choice = Prompt.ask("Enter your choice", choices=["1", "2", "3"])
+        
+        if choice == "1":
+            shopping_menu_loop()
+        elif choice == "2":
+            recipe_menu_loop()
+        elif choice == "3":
             if Confirm.ask("Are you sure you want to quit?"):
                 console.print("[yellow]Goodbye![/yellow]")
                 break
