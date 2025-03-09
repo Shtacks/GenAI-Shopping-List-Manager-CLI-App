@@ -3,19 +3,23 @@ from rich.table import Table
 from rich.prompt import Prompt, Confirm
 from src.models import ShoppingList, ShoppingItem
 from src.utils import (
-    save_list_to_file,
-    load_list_from_file,
-    get_saved_lists,
     organize_list,
     export_to_markdown,
     get_markdown_path,
     ensure_directories_exist,
     generate_ingredient_list,
     generate_recipe,
-    save_recipe,
-    get_recipe,
-    get_recipe_names,
     export_recipe_to_markdown
+)
+from src.database import (
+    save_shopping_list,
+    load_shopping_list,
+    get_shopping_list_names,
+    save_recipe,
+    load_recipe,
+    get_recipe_names,
+    delete_shopping_list,
+    delete_recipe
 )
 
 console = Console()
@@ -43,7 +47,7 @@ def create_list() -> None:
     if name.lower() == 'back':
         return
     shopping_list = ShoppingList(name=name)
-    save_list_to_file(shopping_list, f"{name}.json")
+    save_shopping_list(shopping_list)
     console.print(f"[green]Created new shopping list: {name}[/green]")
 
 def add_item() -> None:
@@ -102,7 +106,7 @@ def add_item() -> None:
         shopping_list.add_item(item)
         
         # Save after each item
-        if save_list_to_file(shopping_list, f"{list_name}.json"):
+        if save_shopping_list(shopping_list):
             console.print(f"[green]Added {quantity}x {name} to {list_name}[/green]")
         else:
             console.print(f"[red]Error saving list: {list_name}[/red]")
@@ -165,7 +169,7 @@ def show_list() -> None:
 
 def list_all() -> None:
     """List all saved shopping lists."""
-    lists = get_saved_lists()
+    lists = get_shopping_list_names()
     if not lists:
         console.print("[yellow]No shopping lists found[/yellow]")
         return
@@ -176,7 +180,7 @@ def list_all() -> None:
     table.add_column("Last Updated", style="magenta")
 
     for list_name in lists:
-        shopping_list = load_list_from_file(f"{list_name}.json")
+        shopping_list = load_shopping_list(list_name)
         if shopping_list:
             table.add_row(
                 list_name,
@@ -196,7 +200,7 @@ def select_list(prompt_text: str = "Select a list") -> tuple[str, ShoppingList]:
         tuple[str, ShoppingList]: The selected list name and loaded shopping list object,
                                  or (None, None) if no list was selected or found
     """
-    saved_lists = get_saved_lists()
+    saved_lists = get_shopping_list_names()
     
     if not saved_lists:
         console.print("[red]No saved lists found. Please create a list first.[/red]")
@@ -222,7 +226,7 @@ def select_list(prompt_text: str = "Select a list") -> tuple[str, ShoppingList]:
     
     # Get the selected list name and load the list
     list_name = saved_lists[choice - 1]
-    shopping_list = load_list_from_file(f"{list_name}.json")
+    shopping_list = load_shopping_list(list_name)
     
     if not shopping_list:
         console.print(f"[red]Error: List '{list_name}' not found[/red]")
@@ -239,7 +243,7 @@ def organize_list_items() -> None:
     console.print("[yellow]Organizing items...[/yellow]")
     try:
         organized_list = organize_list(shopping_list)
-        save_list_to_file(organized_list, f"{list_name}.json")
+        save_shopping_list(organized_list)
         console.print("[green]Items organized successfully![/green]")
         show_list()  # Show the updated list
     except Exception as e:
@@ -306,7 +310,7 @@ def remove_items():
                 item = shopping_list.items[item_num - 1]
                 if Confirm.ask(f"Remove {item.quantity}x {item.name}?"):
                     shopping_list.items.pop(item_num - 1)
-                    if save_list_to_file(shopping_list, f"{list_name}.json"):
+                    if save_shopping_list(shopping_list):
                         console.print(f"[green]Removed {item.quantity}x {item.name}[/green]")
                     else:
                         console.print(f"[red]Error saving list: {list_name}[/red]")
@@ -361,7 +365,7 @@ def create_list_from_meal() -> None:
             continue
     
     # Save the list
-    if save_list_to_file(shopping_list, f"{list_name}.json"):
+    if save_shopping_list(shopping_list):
         console.print(f"[green]Created new shopping list: {list_name}[/green]")
         
         # Show the created list grouped by category
@@ -415,7 +419,7 @@ def show_recipe() -> None:
     
     # Get and display the selected recipe
     recipe_name = recipe_names[choice - 1]
-    recipe = get_recipe(recipe_name)
+    recipe = load_recipe(recipe_name)
     
     if not recipe:
         console.print(f"[red]Error: Recipe '{recipe_name}' not found[/red]")
@@ -467,7 +471,7 @@ def show_recipe() -> None:
     # Option to create shopping list
     if Confirm.ask("\nWould you like to create a shopping list from this recipe?"):
         shopping_list = recipe.to_shopping_list()
-        if save_list_to_file(shopping_list, f"{shopping_list.name}.json"):
+        if save_shopping_list(shopping_list):
             console.print(f"[green]Created shopping list: {shopping_list.name}[/green]")
         else:
             console.print("[red]Error creating shopping list[/red]")
@@ -535,7 +539,7 @@ def generate_new_recipe() -> None:
         # Option to create shopping list
         if Confirm.ask("\nWould you like to create a shopping list from this recipe?"):
             shopping_list = recipe.to_shopping_list()
-            if save_list_to_file(shopping_list, f"{shopping_list.name}.json"):
+            if save_shopping_list(shopping_list):
                 console.print(f"[green]Created shopping list: {shopping_list.name}[/green]")
             else:
                 console.print("[red]Error creating shopping list[/red]")
@@ -570,7 +574,7 @@ def export_recipe_to_markdown_file() -> None:
     
     # Get and export the selected recipe
     recipe_name = recipe_names[choice - 1]
-    recipe = get_recipe(recipe_name)
+    recipe = load_recipe(recipe_name)
     
     if not recipe:
         console.print(f"[red]Error: Recipe '{recipe_name}' not found[/red]")
