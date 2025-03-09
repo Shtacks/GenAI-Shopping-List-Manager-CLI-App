@@ -26,6 +26,10 @@ env/
 ENV/
 .env
 
+# Aider files
+.aider.chat.history.md
+.aider.input.history
+
 # IDE
 .idea/
 .vscode/
