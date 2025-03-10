@@ -1,14 +1,12 @@
 from rich.console import Console
 from rich.table import Table
 from rich.prompt import Prompt, Confirm
-from src.models import ShoppingList, ShoppingItem
+import os
+from src.models import ShoppingList, ShoppingItem, Recipe, RecipeIngredient
 from src.utils import (
-    organize_list,
     export_to_markdown,
     get_markdown_path,
     ensure_directories_exist,
-    generate_ingredient_list,
-    generate_recipe,
     export_recipe_to_markdown
 )
 from src.database import (
@@ -24,6 +22,12 @@ from src.database import (
     add_pantry_item,
     remove_pantry_item
 )
+from src.llm_calls import (
+    generate_recipe_from_ingredients,
+    generate_recipe_from_name,
+    organize_shopping_list,
+    convert_to_shopping_quantities
+)
 
 console = Console()
 
@@ -31,15 +35,18 @@ def display_shopping_menu() -> None:
     """Display the shopping list management menu options."""
     console.print("\n[bold cyan]Shopping List Manager[/bold cyan]")
     console.print("1. Create new list")
-    console.print("2. Add item to list")
-    console.print("3. Show list")
-    console.print("4. List all saved lists")
-    console.print("5. Organize list")
-    console.print("6. Export list to .md")
-    console.print("7. Remove items from list")
-    console.print("8. Create list from Recipes")
-    console.print("9. Mark Items as Purchased")
-    console.print("10. Back to main menu")
+    console.print("2. Show list")
+    console.print("3. Export list to .md")
+    console.print("4. Edit List")
+    console.print("5. Back to main menu")
+    console.print()
+
+def display_create_list_menu() -> None:
+    """Display the create list submenu options."""
+    console.print("\n[bold cyan]Create New List[/bold cyan]")
+    console.print("1. Create empty list")
+    console.print("2. Create from recipes")
+    console.print("3. Back to shopping menu")
     console.print()
 
 def display_recipe_menu() -> None:
@@ -50,6 +57,14 @@ def display_recipe_menu() -> None:
     console.print("3. Show recipe")
     console.print("4. Export recipe to .md")
     console.print("5. Back to main menu")
+    console.print()
+
+def display_generate_recipe_menu() -> None:
+    """Display the recipe generation submenu options."""
+    console.print("\n[bold cyan]Generate Recipe[/bold cyan]")
+    console.print("1. Generate from meal name")
+    console.print("2. Generate from pantry contents")
+    console.print("3. Back to recipe menu")
     console.print()
 
 def display_main_menu() -> None:
@@ -69,6 +84,17 @@ def display_pantry_menu() -> None:
     console.print("3. Edit Items in Pantry")
     console.print("4. Add Items to Pantry from Shopping List")
     console.print("5. Back to main menu")
+    console.print()
+
+def display_edit_list_menu() -> None:
+    """Display the edit list submenu options."""
+    console.print("\n[bold cyan]Edit List[/bold cyan]")
+    console.print("1. Add items to list")
+    console.print("2. Remove items from list")
+    console.print("3. Mark items as purchased")
+    console.print("4. Organize list")
+    console.print("5. Delete List")
+    console.print("6. Back to shopping menu")
     console.print()
 
 def create_list() -> None:
@@ -103,7 +129,7 @@ def create_list() -> None:
             # Get quantity
             while True:
                 try:
-                    quantity = int(Prompt.ask("Enter quantity (or 'back' for main menu)", default="1"))
+                    quantity = float(Prompt.ask("Enter quantity (or 'back' for main menu)", default="1.0"))
                     if str(quantity).lower() == 'back':
                         return
                     if quantity > 0:
@@ -113,6 +139,11 @@ def create_list() -> None:
                     if str(quantity).lower() == 'back':
                         return
                     console.print("[red]Please enter a valid number.[/red]")
+            
+            # Get unit of measure
+            unit = Prompt.ask("Enter unit of measure (e.g., pieces, kg, liters) or 'back' for main menu", default="pieces")
+            if unit.lower() == 'back':
+                return
             
             # Get optional details
             category = Prompt.ask("Enter category (optional, or 'back' for main menu)", default="Other")
@@ -126,6 +157,7 @@ def create_list() -> None:
             item = ShoppingItem(
                 name=name.strip(),
                 quantity=quantity,
+                quantity_unit_of_measure=unit.strip(),
                 category=category.strip() if category else "Other",
                 notes=notes.strip() if notes else ""
             )
@@ -133,7 +165,7 @@ def create_list() -> None:
             
             # Save after each item
             if save_shopping_list(shopping_list):
-                console.print(f"[green]Added {quantity}x {name} to {shopping_list.name}[/green]")
+                console.print(f"[green]Added {quantity} {unit} of {name} to {shopping_list.name}[/green]")
             else:
                 console.print(f"[red]Error saving list: {shopping_list.name}[/red]")
             
@@ -142,13 +174,15 @@ def create_list() -> None:
             table = Table(show_header=False)
             table.add_column("Item", style="cyan")
             table.add_column("Quantity", justify="right", style="green")
+            table.add_column("Unit", style="blue")
             table.add_column("Category", style="yellow")
             table.add_column("Notes", style="magenta")
             
             for item in sorted(shopping_list.items, key=lambda x: x.name.lower()):
                 table.add_row(
                     item.name,
-                    str(item.quantity) if item.quantity > 1 else "",
+                    str(item.quantity),
+                    item.quantity_unit_of_measure,
                     item.category,
                     item.notes or ""
                 )
@@ -184,7 +218,7 @@ def add_item() -> None:
         # Get quantity
         while True:
             try:
-                quantity = int(Prompt.ask("Enter quantity (or 'back' for main menu)", default="1"))
+                quantity = float(Prompt.ask("Enter quantity (or 'back' for main menu)", default="1.0"))
                 if str(quantity).lower() == 'back':
                     return
                 if quantity > 0:
@@ -194,6 +228,11 @@ def add_item() -> None:
                 if str(quantity).lower() == 'back':
                     return
                 console.print("[red]Please enter a valid number.[/red]")
+        
+        # Get unit of measure
+        unit = Prompt.ask("Enter unit of measure (e.g., pieces, kg, liters) or 'back' for main menu", default="pieces")
+        if unit.lower() == 'back':
+            return
         
         # Get optional details
         category = Prompt.ask("Enter category (optional, or 'back' for main menu)", default="Other")
@@ -207,6 +246,7 @@ def add_item() -> None:
         item = ShoppingItem(
             name=name.strip(),
             quantity=quantity,
+            quantity_unit_of_measure=unit.strip(),
             category=category.strip() if category else "Other",
             notes=notes.strip() if notes else ""
         )
@@ -214,7 +254,7 @@ def add_item() -> None:
         
         # Save after each item
         if save_shopping_list(shopping_list):
-            console.print(f"[green]Added {quantity}x {name} to {list_name}[/green]")
+            console.print(f"[green]Added {quantity} {unit} of {name} to {list_name}[/green]")
         else:
             console.print(f"[red]Error saving list: {list_name}[/red]")
         
@@ -223,13 +263,15 @@ def add_item() -> None:
         table = Table(show_header=False)
         table.add_column("Item", style="cyan")
         table.add_column("Quantity", justify="right", style="green")
+        table.add_column("Unit", style="blue")
         table.add_column("Category", style="yellow")
         table.add_column("Notes", style="magenta")
         
         for item in sorted(shopping_list.items, key=lambda x: x.name.lower()):
             table.add_row(
                 item.name,
-                str(item.quantity) if item.quantity > 1 else "",
+                str(item.quantity),
+                item.quantity_unit_of_measure,
                 item.category,
                 item.notes or ""
             )
@@ -260,6 +302,7 @@ def show_list() -> None:
         table = Table(show_header=False)
         table.add_column("Item", style="cyan")
         table.add_column("Quantity", justify="right", style="green")
+        table.add_column("Unit", style="blue")
         table.add_column("Notes", style="yellow")
         table.add_column("Status", justify="center", style="magenta")
         
@@ -267,7 +310,8 @@ def show_list() -> None:
             status = "✓" if item.purchased else " "
             table.add_row(
                 item.name,
-                str(item.quantity) if item.quantity > 1 else "",
+                str(item.quantity),
+                item.quantity_unit_of_measure,
                 item.notes or "",
                 f"[{status}]"
             )
@@ -342,19 +386,26 @@ def select_list(prompt_text: str = "Select a list") -> tuple[str, ShoppingList]:
     return list_name, shopping_list
 
 def organize_list_items() -> None:
-    """Organize items in a list using GPT-4-mini."""
-    list_name, shopping_list = select_list("Select a list to organize")
-    if not shopping_list:
+    """Organize items in a shopping list using AI."""
+    # Get list name
+    list_name = Prompt.ask("Enter list name (or 'back' to return to main menu)")
+    if list_name.lower() == 'back':
         return
-
-    console.print("[yellow]Organizing items...[/yellow]")
-    try:
-        organized_list = organize_list(shopping_list)
-        save_shopping_list(organized_list)
-        console.print("[green]Items organized successfully![/green]")
-        show_list()  # Show the updated list
-    except Exception as e:
-        console.print(f"[red]Error organizing items: {str(e)}[/red]")
+    
+    # Load the list
+    shopping_list = load_shopping_list(list_name)
+    if not shopping_list:
+        console.print(f"[red]Error: List '{list_name}' not found[/red]")
+        return
+    
+    # Organize items using OpenAI
+    shopping_list = organize_shopping_list(shopping_list)
+    
+    # Save the organized list
+    if save_shopping_list(shopping_list):
+        console.print(f"[green]List '{list_name}' organized successfully![/green]")
+    else:
+        console.print(f"[red]Error saving list: {list_name}[/red]")
 
 def export_to_markdown_file() -> None:
     """Export a shopping list to a markdown file."""
@@ -363,8 +414,16 @@ def export_to_markdown_file() -> None:
         return
 
     try:
+        # Use the utility function to generate markdown content
         markdown_content = export_to_markdown(shopping_list)
-        filename = get_markdown_path(f"{list_name}.md", is_recipe=False)
+        
+        # Use the utility function to get the markdown path
+        filename = get_markdown_path(f"{list_name}.md")
+        
+        # Ensure the markdown directory exists
+        ensure_directories_exist()
+        
+        # Write the content to file
         with open(filename, 'w', encoding='utf-8') as f:
             f.write(markdown_content)
         console.print(f"[green]List exported to {filename}[/green]")
@@ -481,7 +540,8 @@ def create_list_from_recipes() -> None:
     list_name = Prompt.ask("Enter a name for your shopping list", default="Combined Recipe List")
     shopping_list = ShoppingList(name=list_name)
     
-    # Add ingredients from all selected recipes
+    # Collect all ingredients from selected recipes
+    all_ingredients = []
     for recipe_name in selected_recipes:
         recipe = load_recipe(recipe_name)
         if not recipe:
@@ -503,24 +563,30 @@ def create_list_from_recipes() -> None:
                 except (ValueError, IndexError):
                     quantity = 1
                 
-                item = ShoppingItem(
-                    name=ingredient.name,
-                    quantity=quantity,
-                    category=ingredient.category,
-                    notes=f"{ingredient.quantity}" + (f" - {ingredient.notes}" if ingredient.notes else "") + f" (from {recipe_name})"
-                )
-                
-                # Check if item already exists
-                existing_item = next((i for i in shopping_list.items if i.name.lower() == item.name.lower()), None)
-                if existing_item:
-                    # Update existing item
-                    existing_item.quantity += item.quantity
-                    existing_item.notes += f", {item.notes}"
-                else:
-                    shopping_list.add_item(item)
+                all_ingredients.append({
+                    "name": ingredient.name,
+                    "quantity": ingredient.quantity,
+                    "category": ingredient.category,
+                    "notes": f"From {recipe_name}"
+                })
             except Exception as e:
                 console.print(f"[red]Error adding ingredient {ingredient.name}: {str(e)}[/red]")
                 continue
+    
+    # Convert recipe quantities to shopping quantities
+    console.print("\n[yellow]Converting recipe quantities to shopping quantities...[/yellow]")
+    shopping_ingredients = convert_to_shopping_quantities(all_ingredients)
+    
+    # Add converted ingredients to shopping list
+    for ingredient in shopping_ingredients:
+        item = ShoppingItem(
+            name=ingredient["name"],
+            quantity=ingredient["quantity"],  # Use the actual quantity from converted ingredients
+            quantity_unit_of_measure=ingredient["quantity_unit_of_measure"],  # Use the unit of measure from converted ingredients
+            category=ingredient["category"],
+            notes=ingredient["notes"]
+        )
+        shopping_list.add_item(item)
     
     # Save the list
     if save_shopping_list(shopping_list):
@@ -537,12 +603,14 @@ def create_list_from_recipes() -> None:
             table = Table(show_header=False)
             table.add_column("Item", style="cyan")
             table.add_column("Quantity", justify="right", style="green")
+            table.add_column("Unit", style="blue")
             table.add_column("Notes", style="yellow")
             
             for item in sorted(items_by_category[category], key=lambda x: x.name.lower()):
                 table.add_row(
                     item.name,
-                    str(item.quantity) if item.quantity > 1 else "",
+                    str(item.quantity),
+                    item.quantity_unit_of_measure,
                     item.notes or ""
                 )
             console.print(table)
@@ -635,74 +703,76 @@ def show_recipe() -> None:
             console.print("[red]Error creating shopping list[/red]")
 
 def generate_new_recipe() -> None:
-    """Generate a new recipe using GPT-4o-mini."""
-    meal = Prompt.ask("Enter meal name (or 'back' to return to main menu)")
+    """Generate a new recipe using AI."""
+    # Get meal name
+    meal = Prompt.ask("Enter meal name (or 'back' to return to recipe menu)")
     if meal.lower() == 'back':
         return
-        
-    console.print(f"\n[yellow]Generating recipe for {meal}...[/yellow]")
-    recipe = generate_recipe(meal)
     
+    console.print(f"\n[yellow]Generating recipe for {meal}...[/yellow]")
+    
+    # Generate recipe using OpenAI
+    recipe = generate_recipe_from_name(meal)
     if not recipe:
-        console.print("[red]Failed to generate recipe. Please try again.[/red]")
         return
     
-    # Save the recipe
-    if save_recipe(recipe):
-        console.print(f"[green]Recipe saved successfully![/green]")
+    # Display the generated recipe
+    console.print("\n[bold]Generated Recipe:[/bold]")
+    if recipe.description:
+        console.print(f"\n[italic]{recipe.description}[/italic]")
+    
+    # Display preparation details
+    console.print("\n[bold]Details:[/bold]")
+    if recipe.prep_time:
+        console.print(f"Prep Time: {recipe.prep_time} minutes")
+    if recipe.cook_time:
+        console.print(f"Cook Time: {recipe.cook_time} minutes")
+    if recipe.get_total_time():
+        console.print(f"Total Time: {recipe.get_total_time()} minutes")
+    console.print(f"Servings: {recipe.servings}")
+    
+    # Display ingredients by category
+    console.print("\n[bold]Ingredients:[/bold]")
+    ingredients_by_category = recipe.get_ingredients_by_category()
+    
+    for category in sorted(ingredients_by_category.keys()):
+        console.print(f"\n[bold]{category}[/bold]")
+        table = Table(show_header=False)
+        table.add_column("Ingredient", style="cyan")
+        table.add_column("Quantity", style="green")
+        table.add_column("Notes", style="yellow")
         
-        # Display the generated recipe
-        console.print("\n[bold]Generated Recipe:[/bold]")
-        if recipe.description:
-            console.print(f"\n[italic]{recipe.description}[/italic]")
-        
-        # Display preparation details
-        console.print("\n[bold]Details:[/bold]")
-        if recipe.prep_time:
-            console.print(f"Prep Time: {recipe.prep_time} minutes")
-        if recipe.cook_time:
-            console.print(f"Cook Time: {recipe.cook_time} minutes")
-        if recipe.get_total_time():
-            console.print(f"Total Time: {recipe.get_total_time()} minutes")
-        console.print(f"Servings: {recipe.servings}")
-        
-        # Display ingredients by category
-        console.print("\n[bold]Ingredients:[/bold]")
-        ingredients_by_category = recipe.get_ingredients_by_category()
-        
-        for category in sorted(ingredients_by_category.keys()):
-            console.print(f"\n[bold]{category}[/bold]")
-            table = Table(show_header=False)
-            table.add_column("Ingredient", style="cyan")
-            table.add_column("Quantity", style="green")
-            table.add_column("Notes", style="yellow")
+        for ingredient in sorted(ingredients_by_category[category], key=lambda x: x.name.lower()):
+            table.add_row(
+                ingredient.name,
+                ingredient.quantity,
+                ingredient.notes or ""
+            )
+        console.print(table)
+    
+    # Display instructions
+    console.print("\n[bold]Instructions:[/bold]")
+    for i, instruction in enumerate(recipe.instructions, 1):
+        console.print(f"\n{i}. {instruction}")
+    
+    # Display additional notes
+    if recipe.notes:
+        console.print(f"\n[bold]Notes:[/bold]\n{recipe.notes}")
+    
+    # Ask if user wants to save the recipe
+    if Confirm.ask("\nWould you like to save this recipe?"):
+        if save_recipe(recipe):
+            console.print(f"[green]Recipe saved successfully![/green]")
             
-            for ingredient in sorted(ingredients_by_category[category], key=lambda x: x.name.lower()):
-                table.add_row(
-                    ingredient.name,
-                    ingredient.quantity,
-                    ingredient.notes or ""
-                )
-            console.print(table)
-        
-        # Display instructions
-        console.print("\n[bold]Instructions:[/bold]")
-        for i, instruction in enumerate(recipe.instructions, 1):
-            console.print(f"\n{i}. {instruction}")
-        
-        # Display additional notes
-        if recipe.notes:
-            console.print(f"\n[bold]Notes:[/bold]\n{recipe.notes}")
-        
-        # Option to create shopping list
-        if Confirm.ask("\nWould you like to create a shopping list from this recipe?"):
-            shopping_list = recipe.to_shopping_list()
-            if save_shopping_list(shopping_list):
-                console.print(f"[green]Created shopping list: {shopping_list.name}[/green]")
-            else:
-                console.print("[red]Error creating shopping list[/red]")
-    else:
-        console.print("[red]Error saving recipe[/red]")
+            # Option to create shopping list
+            if Confirm.ask("\nWould you like to create a shopping list from this recipe?"):
+                shopping_list = recipe.to_shopping_list()
+                if save_shopping_list(shopping_list):
+                    console.print(f"[green]Created shopping list: {shopping_list.name}[/green]")
+                else:
+                    console.print("[red]Error creating shopping list[/red]")
+        else:
+            console.print("[red]Error saving recipe[/red]")
 
 def export_recipe_to_markdown_file() -> None:
     """Export a recipe to a markdown file."""
@@ -739,8 +809,16 @@ def export_recipe_to_markdown_file() -> None:
         return
     
     try:
+        # Use the utility function to generate markdown content
         markdown_content = export_recipe_to_markdown(recipe)
+        
+        # Use the utility function to get the markdown path, specifying this is a recipe
         filename = get_markdown_path(f"{recipe_name}.md", is_recipe=True)
+        
+        # Ensure the markdown directory exists
+        ensure_directories_exist()
+        
+        # Write the content to file
         with open(filename, 'w', encoding='utf-8') as f:
             f.write(markdown_content)
         console.print(f"[green]Recipe exported to {filename}[/green]")
@@ -785,7 +863,6 @@ def create_new_recipe() -> None:
             console.print("[red]Please enter a valid number.[/red]")
     
     # Create recipe object
-    from src.models import Recipe, RecipeIngredient
     recipe = Recipe(
         name=name,
         description=description,
@@ -1171,6 +1248,7 @@ def mark_items_purchased() -> None:
             table.add_column("#", justify="right", style="dim")
             table.add_column("Item", style="cyan")
             table.add_column("Quantity", justify="right", style="green")
+            table.add_column("Unit", style="blue")
             table.add_column("Notes", style="yellow")
             table.add_column("Status", justify="center", style="magenta")
             
@@ -1181,6 +1259,7 @@ def mark_items_purchased() -> None:
                     str(i),
                     item.name,
                     str(item.quantity),
+                    item.quantity_unit_of_measure,
                     item.notes or "",
                     status
                 )
@@ -1225,31 +1304,165 @@ def mark_items_purchased() -> None:
     
     console.print(f"[green]Finished updating items in {list_name}[/green]")
 
+def generate_from_pantry() -> None:
+    """Generate a recipe using ingredients from the pantry."""
+    # Get pantry items
+    pantry_items = get_pantry_items()
+    if not pantry_items:
+        console.print("[yellow]No items in pantry. Please add items first.[/yellow]")
+        return
+
+    # Display available ingredients
+    console.print("\n[bold cyan]Available Ingredients:[/bold cyan]")
+    items_by_category = {}
+    for item in pantry_items:
+        if item['category'] not in items_by_category:
+            items_by_category[item['category']] = []
+        items_by_category[item['category']].append(item)
+
+    # Show ingredients by category
+    for category in sorted(items_by_category.keys()):
+        console.print(f"\n[bold]{category}[/bold]")
+        table = Table(show_header=True)
+        table.add_column("Item", style="cyan")
+        table.add_column("Quantity", justify="right", style="green")
+        table.add_column("Unit", style="blue")
+        table.add_column("Expiry Date", style="yellow")
+        
+        for item in sorted(items_by_category[category], key=lambda x: x['name'].lower()):
+            expiry = item['expiry_date'].strftime("%Y-%m-%d") if item['expiry_date'] else ""
+            table.add_row(
+                item['name'],
+                str(item['quantity']),
+                item['unit'],
+                expiry
+            )
+        console.print(table)
+
+    # Create ingredient list for the prompt
+    ingredients_text = "\n".join([
+        f"- {item['name']} ({item['quantity']} {item['unit']})"
+        for item in pantry_items
+    ])
+
+    console.print(f"\n[yellow]Generating recipe using available ingredients...[/yellow]")
+    
+    # Generate recipe using OpenAI
+    recipe = generate_recipe_from_ingredients(ingredients_text)
+    if not recipe:
+        return
+    
+    # Display the generated recipe
+    console.print("\n[bold]Generated Recipe:[/bold]")
+    console.print(f"\n[bold cyan]{recipe.name}[/bold cyan]")
+    if recipe.description:
+        console.print(f"\n[italic]{recipe.description}[/italic]")
+    
+    # Display preparation details
+    console.print("\n[bold]Details:[/bold]")
+    if recipe.prep_time:
+        console.print(f"Prep Time: {recipe.prep_time} minutes")
+    if recipe.cook_time:
+        console.print(f"Cook Time: {recipe.cook_time} minutes")
+    if recipe.get_total_time():
+        console.print(f"Total Time: {recipe.get_total_time()} minutes")
+    console.print(f"Servings: {recipe.servings}")
+    
+    # Display ingredients by category
+    console.print("\n[bold]Ingredients:[/bold]")
+    ingredients_by_category = recipe.get_ingredients_by_category()
+    
+    for category in sorted(ingredients_by_category.keys()):
+        console.print(f"\n[bold]{category}[/bold]")
+        table = Table(show_header=False)
+        table.add_column("Ingredient", style="cyan")
+        table.add_column("Quantity", style="green")
+        table.add_column("Notes", style="yellow")
+        
+        for ingredient in sorted(ingredients_by_category[category], key=lambda x: x.name.lower()):
+            table.add_row(
+                ingredient.name,
+                ingredient.quantity,
+                ingredient.notes or ""
+            )
+        console.print(table)
+    
+    # Display instructions
+    console.print("\n[bold]Instructions:[/bold]")
+    for i, instruction in enumerate(recipe.instructions, 1):
+        console.print(f"\n{i}. {instruction}")
+    
+    # Display additional notes
+    if recipe.notes:
+        console.print(f"\n[bold]Notes:[/bold]\n{recipe.notes}")
+    
+    # Ask if user wants to save the recipe
+    if Confirm.ask("\nWould you like to save this recipe?"):
+        if save_recipe(recipe):
+            console.print(f"[green]Recipe saved successfully![/green]")
+            
+            # Option to create shopping list
+            if Confirm.ask("\nWould you like to create a shopping list from this recipe?"):
+                shopping_list = recipe.to_shopping_list()
+                if save_shopping_list(shopping_list):
+                    console.print(f"[green]Created shopping list: {shopping_list.name}[/green]")
+                else:
+                    console.print("[red]Error creating shopping list[/red]")
+        else:
+            console.print("[red]Error saving recipe[/red]")
+
+def delete_list() -> None:
+    """Delete a shopping list."""
+    list_name, shopping_list = select_list("Select a list to delete")
+    if not shopping_list:
+        return
+    
+    # Get confirmation
+    if Confirm.ask(f"\nAre you sure you want to delete the list '{list_name}'? This cannot be undone"):
+        if delete_shopping_list(list_name):
+            console.print(f"[green]Successfully deleted list: {list_name}[/green]")
+        else:
+            console.print(f"[red]Error deleting list: {list_name}[/red]")
+
 def shopping_menu_loop() -> None:
     """Shopping list management menu loop."""
     while True:
         display_shopping_menu()
-        choice = Prompt.ask("Enter your choice", choices=["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"])
+        choice = Prompt.ask("Enter your choice", choices=["1", "2", "3", "4", "5"])
         
         if choice == "1":
-            create_list()
+            while True:
+                display_create_list_menu()
+                subchoice = Prompt.ask("Enter your choice", choices=["1", "2", "3"])
+                
+                if subchoice == "1":
+                    create_list()
+                elif subchoice == "2":
+                    create_list_from_recipes()
+                elif subchoice == "3":
+                    break
         elif choice == "2":
-            add_item()
-        elif choice == "3":
             show_list()
-        elif choice == "4":
-            list_all()
-        elif choice == "5":
-            organize_list_items()
-        elif choice == "6":
+        elif choice == "3":
             export_to_markdown_file()
-        elif choice == "7":
-            remove_items()
-        elif choice == "8":
-            create_list_from_recipes()
-        elif choice == "9":
-            mark_items_purchased()
-        elif choice == "10":
+        elif choice == "4":
+            while True:
+                display_edit_list_menu()
+                subchoice = Prompt.ask("Enter your choice", choices=["1", "2", "3", "4", "5", "6"])
+                
+                if subchoice == "1":
+                    add_item()
+                elif subchoice == "2":
+                    remove_items()
+                elif subchoice == "3":
+                    mark_items_purchased()
+                elif subchoice == "4":
+                    organize_list_items()
+                elif subchoice == "5":
+                    delete_list()
+                elif subchoice == "6":
+                    break
+        elif choice == "5":
             break
 
 def recipe_menu_loop() -> None:
@@ -1259,7 +1472,16 @@ def recipe_menu_loop() -> None:
         choice = Prompt.ask("Enter your choice", choices=["1", "2", "3", "4", "5"])
         
         if choice == "1":
-            generate_new_recipe()
+            while True:
+                display_generate_recipe_menu()
+                subchoice = Prompt.ask("Enter your choice", choices=["1", "2", "3"])
+                
+                if subchoice == "1":
+                    generate_new_recipe()
+                elif subchoice == "2":
+                    generate_from_pantry()
+                elif subchoice == "3":
+                    break
         elif choice == "2":
             create_new_recipe()
         elif choice == "3":

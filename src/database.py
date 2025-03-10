@@ -5,93 +5,176 @@ from src.models import ShoppingList, ShoppingItem, Recipe, RecipeIngredient
 
 DATABASE_FILE = "shopping_list.db"
 
+def close_all_connections():
+    """Close all database connections."""
+    try:
+        conn = sqlite3.connect(DATABASE_FILE)
+        c = conn.cursor()
+        c.execute("PRAGMA busy_timeout = 5000")  # Set timeout to 5 seconds
+        c.execute("PRAGMA optimize")  # Optimize the database
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"Error closing connections: {e}")
+
 def init_db():
     """Initialize the SQLite database with required tables."""
-    conn = sqlite3.connect(DATABASE_FILE)
-    c = conn.cursor()
-    
-    # Create shopping lists table
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS shopping_lists (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT UNIQUE NOT NULL,
-            created_at TEXT NOT NULL,
-            updated_at TEXT NOT NULL
-        )
-    ''')
-    
-    # Create shopping items table
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS shopping_items (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            list_id INTEGER NOT NULL,
-            name TEXT NOT NULL,
-            quantity INTEGER DEFAULT 1,
-            category TEXT DEFAULT 'Uncategorized',
-            purchased BOOLEAN DEFAULT 0,
-            notes TEXT,
-            created_at TEXT NOT NULL,
-            updated_at TEXT NOT NULL,
-            FOREIGN KEY (list_id) REFERENCES shopping_lists (id)
-        )
-    ''')
-    
-    # Create recipes table
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS recipes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT UNIQUE NOT NULL,
-            description TEXT,
-            prep_time INTEGER,
-            cook_time INTEGER,
-            servings INTEGER DEFAULT 4,
-            notes TEXT,
-            created_at TEXT NOT NULL,
-            updated_at TEXT NOT NULL
-        )
-    ''')
-    
-    # Create recipe ingredients table
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS recipe_ingredients (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            recipe_id INTEGER NOT NULL,
-            name TEXT NOT NULL,
-            quantity TEXT NOT NULL,
-            category TEXT DEFAULT 'Other',
-            notes TEXT,
-            FOREIGN KEY (recipe_id) REFERENCES recipes (id)
-        )
-    ''')
-    
-    # Create recipe instructions table
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS recipe_instructions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            recipe_id INTEGER NOT NULL,
-            step_number INTEGER NOT NULL,
-            instruction TEXT NOT NULL,
-            FOREIGN KEY (recipe_id) REFERENCES recipes (id)
-        )
-    ''')
-    
-    # Create pantry table
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS pantry (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT UNIQUE NOT NULL,
-            quantity REAL NOT NULL,
-            unit TEXT NOT NULL,
-            category TEXT DEFAULT 'Other',
-            expiry_date TEXT,
-            notes TEXT,
-            created_at TEXT NOT NULL,
-            updated_at TEXT NOT NULL
-        )
-    ''')
-    
-    conn.commit()
-    conn.close()
+    try:
+        # First try to close any existing connections
+        close_all_connections()
+        
+        # Connect with timeout and immediate transaction mode
+        conn = sqlite3.connect(DATABASE_FILE, timeout=10)
+        c = conn.cursor()
+        c.execute("PRAGMA busy_timeout = 5000")  # Set timeout to 5 seconds
+        c.execute("BEGIN IMMEDIATE")  # Start an immediate transaction
+        
+        # Create shopping lists table
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS shopping_lists (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT UNIQUE NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            )
+        ''')
+        
+        # Create shopping items table
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS shopping_items (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                list_id INTEGER NOT NULL,
+                name TEXT NOT NULL,
+                quantity FLOAT DEFAULT 1.0,
+                quantity_unit_of_measure TEXT DEFAULT 'pieces',
+                category TEXT DEFAULT 'Uncategorized',
+                purchased BOOLEAN DEFAULT 0,
+                notes TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY (list_id) REFERENCES shopping_lists (id)
+            )
+        ''')
+        
+        # Create recipes table
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS recipes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT UNIQUE NOT NULL,
+                description TEXT,
+                prep_time INTEGER,
+                cook_time INTEGER,
+                servings INTEGER DEFAULT 4,
+                notes TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            )
+        ''')
+        
+        # Create recipe ingredients table
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS recipe_ingredients (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                recipe_id INTEGER NOT NULL,
+                name TEXT NOT NULL,
+                quantity TEXT NOT NULL,
+                category TEXT DEFAULT 'Other',
+                notes TEXT,
+                FOREIGN KEY (recipe_id) REFERENCES recipes (id)
+            )
+        ''')
+        
+        # Create recipe instructions table
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS recipe_instructions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                recipe_id INTEGER NOT NULL,
+                step_number INTEGER NOT NULL,
+                instruction TEXT NOT NULL,
+                FOREIGN KEY (recipe_id) REFERENCES recipes (id)
+            )
+        ''')
+        
+        # Create pantry table
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS pantry (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT UNIQUE NOT NULL,
+                quantity REAL NOT NULL,
+                unit TEXT NOT NULL,
+                category TEXT DEFAULT 'Other',
+                expiry_date TEXT,
+                notes TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            )
+        ''')
+        
+        # Check if quantity_unit_of_measure column exists in shopping_items table
+        c.execute("PRAGMA table_info(shopping_items)")
+        columns = [column[1] for column in c.fetchall()]
+        
+        # Add quantity_unit_of_measure column if it doesn't exist
+        if 'quantity_unit_of_measure' not in columns:
+            try:
+                c.execute('ALTER TABLE shopping_items ADD COLUMN quantity_unit_of_measure TEXT DEFAULT "pieces"')
+                print("Added quantity_unit_of_measure column to shopping_items table")
+            except Exception as e:
+                print(f"Error adding quantity_unit_of_measure column: {e}")
+        
+        # Check if quantity is FLOAT
+        c.execute("PRAGMA table_info(shopping_items)")
+        columns = {column[1]: column[2] for column in c.fetchall()}
+        
+        # If quantity is not FLOAT, we need to recreate the table
+        if columns.get('quantity', '').upper() != 'FLOAT':
+            try:
+                # Create temporary table
+                c.execute('''
+                    CREATE TABLE shopping_items_temp (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        list_id INTEGER NOT NULL,
+                        name TEXT NOT NULL,
+                        quantity FLOAT DEFAULT 1.0,
+                        quantity_unit_of_measure TEXT DEFAULT 'pieces',
+                        category TEXT DEFAULT 'Uncategorized',
+                        purchased BOOLEAN DEFAULT 0,
+                        notes TEXT,
+                        created_at TEXT NOT NULL,
+                        updated_at TEXT NOT NULL,
+                        FOREIGN KEY (list_id) REFERENCES shopping_lists (id)
+                    )
+                ''')
+                
+                # Copy data, converting quantity to FLOAT
+                c.execute('''
+                    INSERT INTO shopping_items_temp 
+                    SELECT id, list_id, name, CAST(quantity AS FLOAT), 
+                           COALESCE(quantity_unit_of_measure, 'pieces'),
+                           category, purchased, notes, created_at, updated_at 
+                    FROM shopping_items
+                ''')
+                
+                # Drop old table
+                c.execute('DROP TABLE shopping_items')
+                
+                # Rename temp table to shopping_items
+                c.execute('ALTER TABLE shopping_items_temp RENAME TO shopping_items')
+                
+                print("Converted quantity column to FLOAT type")
+            except Exception as e:
+                print(f"Error converting quantity column to FLOAT: {e}")
+        
+        conn.commit()
+        conn.close()
+        print("Database initialization completed successfully")
+    except Exception as e:
+        print(f"Error initializing database: {e}")
+        try:
+            conn.rollback()
+            conn.close()
+        except:
+            pass
 
 def save_shopping_list(shopping_list: ShoppingList) -> bool:
     """Save a shopping list to the database."""
@@ -113,12 +196,13 @@ def save_shopping_list(shopping_list: ShoppingList) -> bool:
         # Insert new items
         for item in shopping_list.items:
             c.execute('''
-                INSERT INTO shopping_items (list_id, name, quantity, category, purchased, notes, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO shopping_items (list_id, name, quantity, quantity_unit_of_measure, category, purchased, notes, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 list_id,
                 item.name,
                 item.quantity,
+                item.quantity_unit_of_measure,
                 item.category,
                 item.purchased,
                 item.notes,
@@ -153,7 +237,7 @@ def load_shopping_list(name: str) -> Optional[ShoppingList]:
         
         # Get items
         c.execute('''
-            SELECT shopping_items.name, shopping_items.quantity, shopping_items.category, shopping_items.purchased, shopping_items.notes, shopping_items.created_at, shopping_items.updated_at
+            SELECT shopping_items.name, shopping_items.quantity, shopping_items.quantity_unit_of_measure, shopping_items.category, shopping_items.purchased, shopping_items.notes, shopping_items.created_at, shopping_items.updated_at
             FROM shopping_items
             JOIN shopping_lists ON shopping_items.list_id = shopping_lists.id
             WHERE shopping_lists.name = ?
@@ -163,11 +247,12 @@ def load_shopping_list(name: str) -> Optional[ShoppingList]:
             item = ShoppingItem(
                 name=item_data[0],
                 quantity=item_data[1],
-                category=item_data[2],
-                purchased=bool(item_data[3]),
-                notes=item_data[4],
-                created_at=datetime.fromisoformat(item_data[5]),
-                updated_at=datetime.fromisoformat(item_data[6])
+                quantity_unit_of_measure=item_data[2],
+                category=item_data[3],
+                purchased=bool(item_data[4]),
+                notes=item_data[5],
+                created_at=datetime.fromisoformat(item_data[6]),
+                updated_at=datetime.fromisoformat(item_data[7])
             )
             shopping_list.items.append(item)
         

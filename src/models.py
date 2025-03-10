@@ -8,7 +8,8 @@ class ShoppingItem:
     
     Attributes:
         name: The name of the item
-        quantity: The quantity to purchase (default: 1)
+        quantity: The quantity to purchase (default: 1.0)
+        quantity_unit_of_measure: The unit of measure for the quantity (default: "pieces")
         category: The category of the item (default: "Uncategorized")
         purchased: Whether the item has been purchased (default: False)
         notes: Optional notes about the item
@@ -16,7 +17,8 @@ class ShoppingItem:
         updated_at: When the item was last updated
     """
     name: str
-    quantity: int = 1
+    quantity: float = 1.0
+    quantity_unit_of_measure: str = "pieces"
     category: str = "Uncategorized"
     purchased: bool = False
     notes: Optional[str] = None
