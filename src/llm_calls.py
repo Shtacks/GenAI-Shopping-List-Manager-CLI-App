@@ -386,6 +386,196 @@ def generate_recipe_from_name(meal: str) -> Optional[Recipe]:
             console.print("[yellow]Rate limit exceeded. Please wait a moment and try again.[/yellow]")
         return None
 
+def generate_recipe_by_meal_type(meal_type: str) -> Optional[Recipe]:
+    """Generate a recipe based on meal type.
+    
+    Args:
+        meal_type: Type of meal (e.g., "Breakfast", "Lunch", "Dinner", etc.)
+        
+    Returns:
+        Optional[Recipe]: Generated recipe object or None if generation fails
+    """
+    try:
+        client = get_client()
+        
+        # Create a detailed prompt for the recipe with explicit formatting
+        prompt = f"""Generate a creative and delicious {meal_type} recipe.
+        Format your response exactly as follows, including all section headers:
+
+        Recipe Name:
+        [Creative and descriptive name for the {meal_type.lower()} dish]
+
+        Description:
+        [A brief description of the dish]
+
+        Prep Time:
+        [Number] minutes
+
+        Cook Time:
+        [Number] minutes
+
+        Servings:
+        [Number]
+
+        Ingredients:
+        {{"name": "ingredient1", "quantity": "amount with units", "category": "category name", "notes": "optional notes"}}
+        {{"name": "ingredient2", "quantity": "amount with units", "category": "category name", "notes": "optional notes"}}
+        [Add more ingredients as needed]
+
+        Instructions:
+        1. [First step]
+        2. [Second step]
+        [Add more steps as needed]
+
+        Notes:
+        [Additional cooking tips or notes]
+
+        Please ensure each ingredient is formatted as a proper Python dictionary on a single line.
+        Categories should be one of: Produce, Dairy, Meat, Pantry, Spices, Other
+        Make the recipe name creative and appetizing.
+        """
+        
+        # Call OpenAI API with increased tokens and adjusted temperature
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": f"You are a professional chef specializing in {meal_type.lower()} recipes. Generate creative and delicious recipes that are appropriate for {meal_type.lower()}. Always format ingredients as proper Python dictionaries and follow the exact format specified."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.7,
+            max_tokens=1500
+        )
+        
+        # Parse the response
+        recipe_text = response.choices[0].message.content
+        
+        # Split the response into sections
+        sections = recipe_text.split("\n\n")
+        
+        # Get recipe name from the first section
+        recipe_name = None
+        for section in sections:
+            if section.lower().startswith("recipe name:"):
+                recipe_name = section.split(":", 1)[1].strip()
+                break
+        
+        if not recipe_name:
+            console.print("[red]Error: Could not find recipe name in generated content[/red]")
+            return None
+        
+        # Create a new recipe object
+        recipe = Recipe(name=recipe_name)
+        
+        # Track which sections we've found for validation
+        found_sections = set()
+        
+        for section in sections:
+            section = section.strip()
+            if not section:
+                continue
+            
+            # Try to identify and parse each section
+            if section.lower().startswith("description:"):
+                recipe.description = section.split(":", 1)[1].strip()
+                found_sections.add("description")
+            
+            elif section.lower().startswith("prep time:"):
+                try:
+                    time_str = section.split(":", 1)[1].strip()
+                    recipe.prep_time = int(''.join(filter(str.isdigit, time_str)))
+                    found_sections.add("prep_time")
+                except:
+                    console.print("[yellow]Warning: Could not parse prep time, setting to None[/yellow]")
+                    recipe.prep_time = None
+            
+            elif section.lower().startswith("cook time:"):
+                try:
+                    time_str = section.split(":", 1)[1].strip()
+                    recipe.cook_time = int(''.join(filter(str.isdigit, time_str)))
+                    found_sections.add("cook_time")
+                except:
+                    console.print("[yellow]Warning: Could not parse cook time, setting to None[/yellow]")
+                    recipe.cook_time = None
+            
+            elif section.lower().startswith("servings:"):
+                try:
+                    servings_str = section.split(":", 1)[1].strip()
+                    recipe.servings = int(''.join(filter(str.isdigit, servings_str)))
+                    found_sections.add("servings")
+                except:
+                    recipe.servings = 4
+            
+            elif "ingredients:" in section.lower():
+                ingredients_text = section.split(":", 1)[1].strip()
+                ingredient_count = 0
+                for line in ingredients_text.split("\n"):
+                    line = line.strip()
+                    if not line or line.startswith("#"):
+                        continue
+                    
+                    try:
+                        # Try to parse ingredient dictionary
+                        ingredient_dict = eval(line)
+                        if isinstance(ingredient_dict, dict) and "name" in ingredient_dict and "quantity" in ingredient_dict:
+                            ingredient = RecipeIngredient(
+                                name=ingredient_dict["name"],
+                                quantity=ingredient_dict["quantity"],
+                                category=ingredient_dict.get("category", "Other"),
+                                notes=ingredient_dict.get("notes", "")
+                            )
+                            recipe.add_ingredient(ingredient)
+                            ingredient_count += 1
+                    except Exception as e:
+                        console.print(f"[yellow]Warning: Could not parse ingredient: {line}[/yellow]")
+                        continue
+                
+                if ingredient_count > 0:
+                    found_sections.add("ingredients")
+            
+            elif "instructions:" in section.lower():
+                instructions_text = section.split(":", 1)[1].strip()
+                instruction_count = 0
+                for line in instructions_text.split("\n"):
+                    line = line.strip()
+                    if line and not line.startswith("#"):
+                        # Remove any numbering at the start
+                        instruction = line.lstrip("0123456789. ")
+                        if instruction:  # Only add non-empty instructions
+                            recipe.add_instruction(instruction)
+                            instruction_count += 1
+                
+                if instruction_count > 0:
+                    found_sections.add("instructions")
+            
+            elif "notes:" in section.lower() or "tips:" in section.lower():
+                recipe.notes = section.split(":", 1)[1].strip()
+                found_sections.add("notes")
+        
+        # Validate the recipe has all required components
+        required_sections = {"description", "ingredients", "instructions"}
+        if not required_sections.issubset(found_sections):
+            missing = required_sections - found_sections
+            console.print(f"[red]Error: Recipe is missing required sections: {', '.join(missing)}[/red]")
+            return None
+            
+        if not recipe.ingredients:
+            console.print("[red]Error: No valid ingredients were parsed[/red]")
+            return None
+            
+        if not recipe.instructions:
+            console.print("[red]Error: No valid instructions were parsed[/red]")
+            return None
+        
+        return recipe
+        
+    except Exception as e:
+        console.print(f"\n[red]Error generating recipe: {str(e)}[/red]")
+        if "maximum context length" in str(e).lower():
+            console.print("[yellow]The recipe was too long. Try requesting a simpler recipe.[/yellow]")
+        elif "rate limit" in str(e).lower():
+            console.print("[yellow]Rate limit exceeded. Please wait a moment and try again.[/yellow]")
+        return None
+
 def organize_shopping_list(shopping_list: ShoppingList) -> ShoppingList:
     """Organize items in a shopping list using GPT-3.5-turbo."""
     try:

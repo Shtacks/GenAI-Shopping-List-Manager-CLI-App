@@ -26,7 +26,8 @@ from src.llm_calls import (
     generate_recipe_from_ingredients,
     generate_recipe_from_name,
     organize_shopping_list,
-    convert_to_shopping_quantities
+    convert_to_shopping_quantities,
+    generate_recipe_by_meal_type
 )
 
 console = Console()
@@ -64,7 +65,20 @@ def display_generate_recipe_menu() -> None:
     console.print("\n[bold cyan]Generate Recipe[/bold cyan]")
     console.print("1. Generate from meal name")
     console.print("2. Generate from pantry contents")
-    console.print("3. Back to recipe menu")
+    console.print("3. Generate from meal type")
+    console.print("4. Back to recipe menu")
+    console.print()
+
+def display_meal_type_menu() -> None:
+    """Display the meal type selection menu."""
+    console.print("\n[bold cyan]Select Meal Type[/bold cyan]")
+    console.print("1. Breakfast")
+    console.print("2. Lunch")
+    console.print("3. Dinner")
+    console.print("4. Dessert")
+    console.print("5. Beverage")
+    console.print("6. Alcoholic Beverage")
+    console.print("7. Back to generate menu")
     console.print()
 
 def display_main_menu() -> None:
@@ -1465,6 +1479,94 @@ def shopping_menu_loop() -> None:
         elif choice == "5":
             break
 
+def generate_from_meal_type() -> None:
+    """Generate a recipe based on selected meal type."""
+    while True:
+        display_meal_type_menu()
+        choice = Prompt.ask("Enter your choice", choices=["1", "2", "3", "4", "5", "6", "7"])
+        
+        meal_type = None
+        if choice == "1":
+            meal_type = "Breakfast"
+        elif choice == "2":
+            meal_type = "Lunch"
+        elif choice == "3":
+            meal_type = "Dinner"
+        elif choice == "4":
+            meal_type = "Dessert"
+        elif choice == "5":
+            meal_type = "Beverage"
+        elif choice == "6":
+            meal_type = "Alcoholic Beverage"
+        elif choice == "7":
+            break
+        
+        if meal_type:
+            console.print(f"\n[yellow]Generating {meal_type.lower()} recipe...[/yellow]")
+            recipe = generate_recipe_by_meal_type(meal_type)
+            
+            if not recipe:
+                continue
+            
+            # Display the generated recipe
+            console.print("\n[bold]Generated Recipe:[/bold]")
+            console.print(f"\n[bold cyan]{recipe.name}[/bold cyan]")
+            if recipe.description:
+                console.print(f"\n[italic]{recipe.description}[/italic]")
+            
+            # Display preparation details
+            console.print("\n[bold]Details:[/bold]")
+            if recipe.prep_time:
+                console.print(f"Prep Time: {recipe.prep_time} minutes")
+            if recipe.cook_time:
+                console.print(f"Cook Time: {recipe.cook_time} minutes")
+            if recipe.get_total_time():
+                console.print(f"Total Time: {recipe.get_total_time()} minutes")
+            console.print(f"Servings: {recipe.servings}")
+            
+            # Display ingredients by category
+            console.print("\n[bold]Ingredients:[/bold]")
+            ingredients_by_category = recipe.get_ingredients_by_category()
+            
+            for category in sorted(ingredients_by_category.keys()):
+                console.print(f"\n[bold]{category}[/bold]")
+                table = Table(show_header=False)
+                table.add_column("Ingredient", style="cyan")
+                table.add_column("Quantity", style="green")
+                table.add_column("Notes", style="yellow")
+                
+                for ingredient in sorted(ingredients_by_category[category], key=lambda x: x.name.lower()):
+                    table.add_row(
+                        ingredient.name,
+                        ingredient.quantity,
+                        ingredient.notes or ""
+                    )
+                console.print(table)
+            
+            # Display instructions
+            console.print("\n[bold]Instructions:[/bold]")
+            for i, instruction in enumerate(recipe.instructions, 1):
+                console.print(f"\n{i}. {instruction}")
+            
+            # Display additional notes
+            if recipe.notes:
+                console.print(f"\n[bold]Notes:[/bold]\n{recipe.notes}")
+            
+            # Ask if user wants to save the recipe
+            if Confirm.ask("\nWould you like to save this recipe?"):
+                if save_recipe(recipe):
+                    console.print(f"[green]Recipe saved successfully![/green]")
+                    
+                    # Option to create shopping list
+                    if Confirm.ask("\nWould you like to create a shopping list from this recipe?"):
+                        shopping_list = recipe.to_shopping_list()
+                        if save_shopping_list(shopping_list):
+                            console.print(f"[green]Created shopping list: {shopping_list.name}[/green]")
+                        else:
+                            console.print("[red]Error creating shopping list[/red]")
+                else:
+                    console.print("[red]Error saving recipe[/red]")
+
 def recipe_menu_loop() -> None:
     """Recipe management menu loop."""
     while True:
@@ -1474,13 +1576,15 @@ def recipe_menu_loop() -> None:
         if choice == "1":
             while True:
                 display_generate_recipe_menu()
-                subchoice = Prompt.ask("Enter your choice", choices=["1", "2", "3"])
+                subchoice = Prompt.ask("Enter your choice", choices=["1", "2", "3", "4"])
                 
                 if subchoice == "1":
                     generate_new_recipe()
                 elif subchoice == "2":
                     generate_from_pantry()
                 elif subchoice == "3":
+                    generate_from_meal_type()
+                elif subchoice == "4":
                     break
         elif choice == "2":
             create_new_recipe()
