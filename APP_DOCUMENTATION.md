@@ -1,10 +1,10 @@
 # Shopping List Organizer
 
-A modern and intuitive command-line application for managing and organizing shopping lists and recipes with AI-powered categorization capabilities.
+A modern and intuitive command-line application for managing and organizing shopping lists, recipes, and pantry inventory with AI-powered categorization capabilities.
 
 ## Overview
 
-The Shopping List Organizer is a feature-rich CLI application that helps users create, manage, and organize their shopping lists and recipes efficiently. It leverages AI technology to automatically categorize items and provides convenient export options for sharing and printing lists.
+The Shopping List Organizer is a feature-rich CLI application that helps users create, manage, and organize their shopping lists, recipes, and pantry inventory efficiently. It leverages AI technology to automatically categorize items and provides convenient export options for sharing and printing lists.
 
 ## Key Features
 
@@ -13,15 +13,17 @@ The Shopping List Organizer is a feature-rich CLI application that helps users c
 - Add, view, and remove items from lists
 - Track creation and update timestamps for lists and items
 - View all saved lists with item counts and last update times
+- Mark items as purchased/unpurchased with easy tracking
 - Easy list selection interface with numbered options
 - Quick navigation with "Back" option in all submenus
-- Organized file storage in dedicated directories
+- Organized data storage in SQLite database
 
 ### 2. Item Details
 - Add quantities for each item
 - Include optional notes for items
 - Mark items as purchased/unpurchased
 - Organize items by categories
+- Track purchase status with visual indicators (✓)
 
 ### 3. AI-Powered Organization
 - Automatic categorization of items using GPT-3.5-turbo
@@ -42,14 +44,25 @@ The Shopping List Organizer is a feature-rich CLI application that helps users c
 - Include purchase status (✓ for purchased items)
 - Timestamps for creation and last update
 - Quantities and notes included in export
-- Exports stored in dedicated markdown directories
+- Exports stored in markdown directories
 
 ### 5. Recipe Management
-- Create and store recipes with detailed information
+- Create recipes manually with detailed information
 - Generate recipes using AI assistance
 - Convert recipes to shopping lists
 - Export recipes to markdown format
-- Organize recipes in dedicated directories
+- Combine multiple recipes into a single shopping list
+- Create shopping lists from multiple recipes at once
+- Automatic ingredient consolidation and quantity calculation
+
+### 6. Pantry Management
+- Track pantry inventory with quantities and units
+- Monitor expiry dates for items
+- Organize items by category
+- Add notes and details for each item
+- Convert purchased shopping list items to pantry inventory
+- Edit and update pantry items easily
+- Remove expired or depleted items
 
 ## Usage Guide
 
@@ -57,99 +70,169 @@ The Shopping List Organizer is a feature-rich CLI application that helps users c
 
 Every submenu in the application includes a "Back" option to return to the main menu at any time. This allows for easy navigation and prevents getting stuck in submenus.
 
-### File Organization
+### Data Storage
 
-The application organizes files in a structured directory layout:
-```
-lists/
-├── shopping/
-│   ├── JSON/    # Stores shopping list data files
-│   └── MD/      # Stores shopping list markdown exports
-└── recipes/
-    ├── JSON/    # Stores recipe data files
-    └── MD/      # Stores recipe markdown exports
-```
-
-This organization helps keep your shopping lists, recipes, and their exports neatly separated and easy to find.
+The application uses SQLite for efficient data storage:
+- Shopping lists with items, quantities, categories, and purchase status
+- Recipes with ingredients, instructions, and metadata
+- Pantry inventory with quantities, units, and expiry dates
+- All data is stored locally and persists between sessions
 
 ### Main Menu Options
 
+#### Shopping List Manager
+
 1. **Create new list**
    - Enter a name for your new shopping list
-   - Type 'back' to return to main menu
-   - Lists are automatically saved in the shopping/JSON directory
+   - Start adding items immediately after creation
+   - Specify quantities, categories, and notes for each item
+   - View list contents after each addition
+   - Type 'done' to finish or 'back' to return to menu
 
 2. **Add item to list**
-   - Choose from numbered list of available shopping lists (includes Back option)
-   - For each item, you can specify:
-     - Name
+   - Choose from numbered list of available shopping lists
+   - For each item, specify:
+     - Name (required)
      - Quantity (defaults to 1)
-     - Category (optional, can be auto-categorized)
+     - Category (defaults to "Other")
      - Notes (optional)
-   - Type 'done' to finish adding items
-   - Type 'back' at any prompt to return to main menu
-   - View current list contents after each addition
+   - View updated list after each addition
+   - Type 'done' to finish or 'back' for main menu
 
 3. **Show list**
-   - Select a list from numbered options (includes Back option)
-   - Items are grouped by category
-   - Shows quantities, notes, and purchase status
-   - Displays creation and last update times
+   - Select a list from numbered options
+   - View items grouped by category
+   - See quantities, notes, and purchase status
+   - Display creation and last update timestamps
+   - Option to create shopping list from recipes
 
 4. **List all saved lists**
-   - See all your shopping lists in one view
-   - Shows the number of items in each list
-   - Displays when each list was last updated
+   - View all shopping lists in a table format
+   - See number of items in each list
+   - View last update timestamp for each list
 
 5. **Organize list**
-   - Select a list from numbered options (includes Back option)
+   - Select a list to organize
    - AI automatically categorizes items
-   - Items are grouped into logical categories
-   - Updates are saved automatically
+   - Items grouped into logical categories
+   - Updates saved automatically
+   - View organized list immediately
 
 6. **Export to .md**
-   - Select a list from numbered options (includes Back option)
-   - Converts list to markdown format
-   - Saves the export in the shopping/MD directory
-   - Perfect for sharing or printing
-   - Maintains all item details and organization
-   - Creates a clean, readable format
+   - Select a list to export
+   - Creates formatted markdown file
+   - Includes all item details and categories
+   - Shows purchase status for items
+   - Includes timestamps and metadata
 
 7. **Remove items from list**
-   - Select a list from numbered options (includes Back option)
+   - Select a list to modify
+   - View numbered list of items
    - Choose items to remove by number
-   - Type 'done' to finish removing items
-   - Type 'back' at any prompt to return to main menu
-   - List is automatically updated
+   - Confirm removal of each item
+   - View updated list after each removal
 
-8. **Create list from meal**
-   - Enter a meal name to generate ingredients
-   - AI generates a detailed list of ingredients
-   - Creates a new shopping list with the ingredients
-   - Items are automatically categorized
-   - Quantities and notes are included
+8. **Create list from Recipes**
+   - Select multiple recipes to combine
+   - Toggle recipes on/off in selection
+   - Automatic ingredient consolidation
+   - Smart quantity combination
+   - Recipe source tracking in notes
+   - View combined list by category
 
-9. **Generate Recipe**
-   - Enter a meal name to generate a recipe
-   - AI creates a complete recipe with:
+9. **Mark Items as Purchased**
+   - Select a list to update
+   - View items organized by category
+   - Toggle individual items as purchased
+   - Mark all items as purchased at once
+   - Clear ✓ indicators for status
+   - Option to add to pantry inventory
+
+#### Recipe Manager
+
+1. **Generate new recipe**
+   - Enter meal name for AI generation
+   - Get complete recipe with:
      - Description
      - Prep and cook times
-     - Ingredients with quantities
+     - Servings
+     - Categorized ingredients
      - Step-by-step instructions
-     - Additional notes
-   - Option to create a shopping list from the recipe
+     - Notes
+   - Option to create shopping list
 
-10. **Show Recipe**
-    - View saved recipes with full details
-    - Organized display of ingredients by category
-    - Clear step-by-step instructions
-    - Option to create a shopping list from the recipe
+2. **Create new recipe**
+   - Enter recipe details:
+     - Name and description
+     - Prep and cook times
+     - Number of servings
+   - Add ingredients with:
+     - Name
+     - Quantity and unit
+     - Category
+     - Notes
+   - Enter step-by-step instructions
+   - Add additional notes
+   - Option to create shopping list
 
-11. **Export recipe to .md**
-    - Select a recipe to export
-    - Converts recipe to markdown format
-    - Saves in the recipes/MD directory
-    - Includes all recipe details and formatting
+3. **Show Recipe**
+   - Select from available recipes
+   - View complete recipe details:
+     - Description and timing
+     - Ingredients by category
+     - Instructions
+     - Notes
+   - Option to create shopping list
+   - Option to export to markdown
+
+4. **Export recipe to .md**
+   - Select recipe to export
+   - Creates formatted markdown file
+   - Includes all recipe details
+   - Organized by sections
+   - Clear instruction formatting
+
+#### Pantry Manager
+
+1. **Show Pantry Inventory**
+   - View all items by category
+   - See for each item:
+     - Name
+     - Quantity and unit
+     - Category
+     - Expiry date
+     - Notes
+   - Clear table format display
+
+2. **Add Items to Pantry**
+   - Add new items with:
+     - Name (required)
+     - Quantity (required)
+     - Unit of measurement
+     - Category (defaults to "Other")
+     - Expiry date (optional)
+     - Notes (optional)
+   - Immediate database storage
+
+3. **Edit Items in Pantry**
+   - View all items in table format
+   - Select items to edit by number
+   - Update any item details:
+     - Quantity and unit
+     - Category
+     - Expiry date
+     - Notes
+   - Option to remove items
+   - Changes saved automatically
+
+4. **Add Items to Pantry from Shopping List**
+   - Select a list with purchased items
+   - Choose items to transfer:
+     - Individual items
+     - All purchased items
+   - Specify units for each item
+   - Transfer categories and notes
+   - Option to add custom notes
 
 ## Sample Export Formats
 
@@ -203,42 +286,47 @@ This organization helps keep your shopping lists, recipes, and their exports nea
 Additional tips and suggestions
 ```
 
-## Data Storage
-
-- Shopping lists are saved in JSON format in the `lists/shopping/JSON` directory
-- Shopping list exports are saved as markdown in the `lists/shopping/MD` directory
-- Recipes are saved in JSON format in the `lists/recipes/JSON` directory
-- Recipe exports are saved as markdown in the `lists/recipes/MD` directory
-- Each list and recipe maintains:
-  - Name
-  - Creation timestamp
-  - Last update timestamp
-  - Full details of items/ingredients
-- Data persists between sessions
-- Lists and recipes can be accessed and modified at any time
-
 ## Best Practices
 
 1. **Naming Lists and Recipes**
    - Use descriptive names (e.g., "Weekly Groceries", "Party Supplies", "Grandma's Cookies")
    - Consider including dates for recurring lists
-   - Avoid special characters that might cause issues with file names
+   - Avoid special characters in names
 
 2. **Adding Items**
-   - Be specific with item names for better categorization
-   - Include quantities for precise shopping
-   - Use notes for brands or specific requirements
-   - Use 'back' option if you need to return to main menu
+   - Be specific with item names
+   - Include precise quantities
+   - Use notes for brands or specifications
+   - Categorize items appropriately
+   - Mark purchase status while shopping
 
 3. **Organization**
-   - Use the AI categorization for consistent organization
-   - Review categorized items to ensure accuracy
-   - Export lists and recipes before shopping for offline access
-   - Keep your directories organized by removing old or unused items
+   - Use AI categorization for consistency
+   - Review and verify categories
+   - Keep lists current and organized
+   - Maintain accurate pantry inventory
+   - Regular cleanup of old lists
 
-4. **List and Recipe Management**
-   - Regular cleanup of completed lists
-   - Update quantities as needed
+4. **Recipe Management**
+   - Include all recipe details
+   - Use precise measurements
+   - Write clear instructions
+   - Add helpful preparation notes
+   - Consider serving size adjustments
+   - Test generated recipes
+
+5. **Shopping Workflow**
+   - Create organized shopping lists
    - Mark items as purchased while shopping
-   - Use 'back' option to switch between lists easily
-   - Check both JSON and MD directories when backing up your data 
+   - Transfer purchased items to pantry
+   - Update quantities after shopping
+   - Remove completed lists
+
+6. **Pantry Management**
+   - Regular inventory updates
+   - Monitor expiry dates
+   - Remove expired items
+   - Maintain consistent categories
+   - Track item locations
+   - Update after shopping trips
+   - Note special storage requirements 

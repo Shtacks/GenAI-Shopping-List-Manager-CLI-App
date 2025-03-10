@@ -75,6 +75,21 @@ def init_db():
         )
     ''')
     
+    # Create pantry table
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS pantry (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT UNIQUE NOT NULL,
+            quantity REAL NOT NULL,
+            unit TEXT NOT NULL,
+            category TEXT DEFAULT 'Other',
+            expiry_date TEXT,
+            notes TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+    ''')
+    
     conn.commit()
     conn.close()
 
@@ -328,4 +343,156 @@ def delete_recipe(name: str) -> bool:
         return True
     except Exception as e:
         print(f"Error deleting recipe: {e}")
-        return False 
+        return False
+
+def get_pantry_items() -> List[Dict]:
+    """Get all items from the pantry."""
+    try:
+        conn = sqlite3.connect(DATABASE_FILE)
+        c = conn.cursor()
+        c.execute('''
+            SELECT name, quantity, unit, category, expiry_date, notes, created_at, updated_at
+            FROM pantry
+            ORDER BY category, name
+        ''')
+        
+        items = []
+        for row in c.fetchall():
+            items.append({
+                'name': row[0],
+                'quantity': float(row[1]),
+                'unit': row[2],
+                'category': row[3],
+                'expiry_date': datetime.fromisoformat(row[4]) if row[4] else None,
+                'notes': row[5],
+                'created_at': datetime.fromisoformat(row[6]),
+                'updated_at': datetime.fromisoformat(row[7])
+            })
+        
+        conn.close()
+        return items
+    except Exception as e:
+        print(f"Error getting pantry items: {e}")
+        return []
+
+def add_pantry_item(name: str, quantity: float, unit: str, category: str = "Other",
+                   expiry_date: Optional[datetime] = None, notes: str = "") -> bool:
+    """Add or update an item in the pantry."""
+    try:
+        conn = sqlite3.connect(DATABASE_FILE)
+        c = conn.cursor()
+        
+        now = datetime.now()
+        
+        # Check if item exists
+        c.execute('SELECT quantity FROM pantry WHERE name = ?', (name,))
+        existing = c.fetchone()
+        
+        if existing:
+            # Update existing item
+            c.execute('''
+                UPDATE pantry
+                SET quantity = ?, unit = ?, category = ?, expiry_date = ?, notes = ?, updated_at = ?
+                WHERE name = ?
+            ''', (
+                quantity,
+                unit,
+                category,
+                expiry_date.isoformat() if expiry_date else None,
+                notes,
+                now.isoformat(),
+                name
+            ))
+        else:
+            # Insert new item
+            c.execute('''
+                INSERT INTO pantry (name, quantity, unit, category, expiry_date, notes, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                name,
+                quantity,
+                unit,
+                category,
+                expiry_date.isoformat() if expiry_date else None,
+                notes,
+                now.isoformat(),
+                now.isoformat()
+            ))
+        
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        print(f"Error adding pantry item: {e}")
+        return False
+
+def remove_pantry_item(name: str) -> bool:
+    """Remove an item from the pantry."""
+    try:
+        conn = sqlite3.connect(DATABASE_FILE)
+        c = conn.cursor()
+        
+        c.execute('DELETE FROM pantry WHERE name = ?', (name,))
+        
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        print(f"Error removing pantry item: {e}")
+        return False
+
+def check_pantry_stock(recipe: Recipe) -> Dict[str, Dict]:
+    """Check if there are enough ingredients in the pantry for a recipe.
+    
+    Args:
+        recipe: Recipe object to check ingredients for
+        
+    Returns:
+        Dict[str, Dict]: Dictionary mapping ingredient names to their status:
+            {
+                'ingredient_name': {
+                    'required': float,
+                    'available': float,
+                    'unit': str,
+                    'sufficient': bool
+                }
+            }
+    """
+    try:
+        conn = sqlite3.connect(DATABASE_FILE)
+        c = conn.cursor()
+        
+        stock_status = {}
+        
+        for ingredient in recipe.ingredients:
+            # Get the first number from the quantity string
+            try:
+                required_quantity = float(''.join(c for c in ingredient.quantity if c.isdigit() or c == '.'))
+            except ValueError:
+                required_quantity = 1.0
+            
+            # Get current stock
+            c.execute('SELECT quantity, unit FROM pantry WHERE name = ?', (ingredient.name,))
+            result = c.fetchone()
+            
+            if result:
+                available_quantity, unit = result
+                stock_status[ingredient.name] = {
+                    'required': required_quantity,
+                    'available': available_quantity,
+                    'unit': unit,
+                    'sufficient': available_quantity >= required_quantity
+                }
+            else:
+                stock_status[ingredient.name] = {
+                    'required': required_quantity,
+                    'available': 0,
+                    'unit': 'unknown',
+                    'sufficient': False
+                }
+        
+        conn.close()
+        return stock_status
+    except Exception as e:
+        print(f"Error checking pantry stock: {e}")
+        return {} 
